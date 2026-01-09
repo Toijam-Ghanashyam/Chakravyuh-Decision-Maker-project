@@ -847,6 +847,160 @@ body.light-mode .login-subtitle {
   color: var(--light-text-tertiary);
 }
 
+/* === RECENT DECISIONS SECTION === */
+.recent-decisions-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.recent-decision-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.recent-decision-card:hover {
+  border-color: var(--primary);
+  background-color: rgba(16, 185, 129, 0.05);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.recent-decision-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.recent-decision-meta {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.recent-decision-category {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: var(--primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.recent-decision-date {
+  color: var(--text-tertiary);
+}
+
+.recent-decisions-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-tertiary);
+  background-color: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+/* Light mode for recent decisions */
+body.light-mode .recent-decision-card {
+  background-color: var(--light-surface);
+  border-color: var(--light-border);
+}
+
+body.light-mode .recent-decision-card:hover {
+  border-color: var(--light-accent);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+body.light-mode .recent-decision-title {
+  color: var(--light-text-primary);
+}
+
+body.light-mode .recent-decision-category {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--light-accent);
+}
+
+body.light-mode .recent-decision-date {
+  color: var(--light-text-tertiary);
+}
+
+body.light-mode .recent-decisions-empty {
+  background-color: var(--light-surface);
+  border-color: var(--light-border);
+  color: var(--light-text-tertiary);
+}
+
+/* === CHAT MESSAGE STYLES === */
+.chat-message {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  max-width: 80%;
+  word-wrap: break-word;
+  line-height: 1.5;
+  animation: fadeInMessage 0.3s ease;
+}
+
+@keyframes fadeInMessage {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-message.user {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  align-self: flex-end;
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message.assistant {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  align-self: flex-start;
+  margin-right: auto;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-message.welcome {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: var(--text-primary);
+  align-self: center;
+  text-align: center;
+  max-width: 90%;
+  padding: 1.5rem;
+  font-style: italic;
+}
+
+/* Light mode chat messages */
+body.light-mode .chat-message.assistant {
+  background-color: var(--light-surface);
+  border-color: var(--light-border);
+  color: var(--light-text-primary);
+}
+
+body.light-mode .chat-message.welcome {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: var(--light-text-primary);
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
   .sidebar {
@@ -926,6 +1080,10 @@ body.light-mode .login-subtitle {
   }
 
   .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recent-decisions-list {
     grid-template-columns: 1fr;
   }
 }

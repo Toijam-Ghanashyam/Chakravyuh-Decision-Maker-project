@@ -164,6 +164,12 @@
                     <div id="teamMembersCount" class="stat-value">0</div>
                   </div>
                 </div>
+                
+                <!-- Recent Decisions Section -->
+                <div class="recent-decisions-section" style="margin-top: 3rem;">
+                  <h4 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">Recent Decisions</h4>
+                  <div id="recentDecisionsList" class="recent-decisions-list"></div>
+                </div>
               </div>
             </div>
 
@@ -172,7 +178,7 @@
                 <h3>AI Chat Assistant</h3>
                 <p>Conversational decision support powered by AI.</p>
                 <div class="chat-panel">
-                  <div id="chatMessages" class="chat-messages" style="min-height:300px; max-height:400px; overflow:auto; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:1rem;"></div>
+                  <div id="chatMessages" class="chat-messages" style="min-height:300px; max-height:400px; overflow:auto; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:1rem; display:flex; flex-direction:column;"></div>
                   <div class="chat-input" style="display:flex; gap:0.5rem;">
                     <input id="chatInput" type="text" placeholder="Ask the AI about decisions..." style="flex:1; padding:0.75rem; border-radius:8px; border:1px solid var(--border); background:var(--background); color:var(--text-primary);" />
                     <button id="chatSend" class="btn btn-primary">Send</button>

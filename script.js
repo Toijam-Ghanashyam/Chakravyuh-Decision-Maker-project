@@ -80,6 +80,31 @@ document.addEventListener("DOMContentLoaded", () => {
   initAuth()
   renderDashboardStats()
   renderTeamMembers()
+  renderRecentDecisions()
+  
+  // Show welcome message in chat if chat is empty
+  if (chatMessages && chatMessages.children.length === 0) {
+    showWelcomeMessage()
+  }
+  
+  // Clear chat UI when page is actually unloading (but keep database)
+  // Using visibilitychange to detect when user closes tab/window
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      // Page is being hidden (user switching tabs or closing)
+      // Clear chat UI but keep database
+      if (chatMessages) {
+        chatMessages.innerHTML = ''
+      }
+    }
+  })
+  
+  // Also clear on beforeunload for immediate close
+  window.addEventListener('beforeunload', () => {
+    if (chatMessages) {
+      chatMessages.innerHTML = ''
+    }
+  })
 })
 
 function initializeEventListeners() {
@@ -287,35 +312,10 @@ function initAuth() {
 // API key storage removed — Edge Function handles the Gemini API key securely.
 
 async function loadChatHistory() {
-  if (!supabaseClient) {
-    // render from local history
-    if (window.chatHistory && chatMessages) {
-      chatMessages.innerHTML = ''
-      window.chatHistory.forEach(m => appendChatMessage(m.text, m.role === 'user' ? 'user' : 'assistant'))
-    }
-    return
-  }
-
-  try {
-    const { data: userData } = await supabaseClient.auth.getUser()
-    const userId = userData?.user?.id
-    if (!userId) return
-
-    const { data, error } = await supabaseClient
-      .from('chat_messages')
-      .select('id, role, content, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-
-    if (error) return console.error('Failed to load chat history', error)
-
-    window.chatHistory = (data || []).map(r => ({ role: r.role, text: r.content, created_at: r.created_at }))
-    if (chatMessages) {
-      chatMessages.innerHTML = ''
-      window.chatHistory.forEach(m => appendChatMessage(m.text, m.role === 'user' ? 'user' : 'assistant'))
-    }
-  } catch (err) {
-    console.error('loadChatHistory error', err)
+  // Don't load chat history from database - show welcome message instead
+  // Chat history is kept in database but UI is cleared on each visit for a fresh start
+  if (chatMessages && chatMessages.children.length === 0) {
+    showWelcomeMessage()
   }
 }
 
@@ -396,6 +396,12 @@ function switchView(viewName) {
 
   activeView = viewName
   closeSearch()
+  
+  // Show welcome message when switching to AI chat view
+  if (viewName === 'ai-insights' && chatMessages && chatMessages.children.length === 0) {
+    showWelcomeMessage()
+  }
+  
   // Render dynamic content for certain views
   if (viewName === 'memory-archive') renderMemoryArchive()
   if (viewName === 'dashboard') renderDashboardStats()
@@ -537,7 +543,11 @@ async function loadDecisions() {
 
   window.decisions = data || []
   // Update UI after loading
-  try { renderDashboardStats(); renderMemoryArchive(); } catch (e) { /* ignore */ }
+  try { 
+    renderDashboardStats()
+    renderMemoryArchive()
+    renderRecentDecisions()
+  } catch (e) { /* ignore */ }
 }
 
 // ====== RENDER / UI HELPERS ======
@@ -606,6 +616,79 @@ function renderMemoryArchive() {
       item.appendChild(meta)
     }
     container.appendChild(item)
+  })
+}
+
+function renderRecentDecisions() {
+  const container = document.getElementById('recentDecisionsList')
+  if (!container) return
+  
+  const decisions = (window.decisions || [])
+    .slice()
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+    .slice(0, 6) // Show only the 6 most recent
+  
+  if (decisions.length === 0) {
+    container.innerHTML = '<div class="recent-decisions-empty">No recent decisions. <a href="#" data-view="add-decision" style="color: var(--primary); text-decoration: none;">Add your first decision</a></div>'
+    // Make the link work
+    const link = container.querySelector('a')
+    if (link) {
+      link.addEventListener('click', (e) => {
+        e.preventDefault()
+        switchView('add-decision')
+      })
+    }
+    return
+  }
+  
+  container.innerHTML = ''
+  decisions.forEach(d => {
+    const card = document.createElement('div')
+    card.className = 'recent-decision-card'
+    card.addEventListener('click', () => {
+      switchView('memory-archive')
+    })
+    
+    const title = document.createElement('div')
+    title.className = 'recent-decision-title'
+    title.textContent = d.title || 'Untitled Decision'
+    
+    const meta = document.createElement('div')
+    meta.className = 'recent-decision-meta'
+    
+    if (d.category) {
+      const category = document.createElement('span')
+      category.className = 'recent-decision-category'
+      category.textContent = d.category
+      meta.appendChild(category)
+    }
+    
+    if (d.date) {
+      const date = document.createElement('span')
+      date.className = 'recent-decision-date'
+      date.textContent = new Date(d.date).toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+      })
+      meta.appendChild(date)
+    }
+    
+    card.appendChild(title)
+    if (d.notes && d.notes.length > 0) {
+      const notes = document.createElement('p')
+      notes.style.marginTop = '0.5rem'
+      notes.style.color = 'var(--text-secondary)'
+      notes.style.fontSize = '0.875rem'
+      notes.style.display = '-webkit-box'
+      notes.style.webkitLineClamp = '2'
+      notes.style.webkitBoxOrient = 'vertical'
+      notes.style.overflow = 'hidden'
+      notes.textContent = d.notes
+      card.appendChild(notes)
+    }
+    card.appendChild(meta)
+    container.appendChild(card)
   })
 }
 
@@ -678,22 +761,26 @@ Remember: You are an advisor, not a decision-maker. Guide with intelligence, not
 function appendChatMessage(text, who = 'user') {
   if (!chatMessages) return
   const msg = document.createElement('div')
-  msg.style.marginBottom = '0.5rem'
-  msg.style.padding = '0.5rem 0.75rem'
-  msg.style.borderRadius = '8px'
-  msg.style.maxWidth = '80%'
-  if (who === 'user') {
-    msg.style.background = 'rgba(255,255,255,0.04)'
-    msg.style.color = 'var(--text-primary)'
-    msg.style.alignSelf = 'flex-end'
-  } else {
-    msg.style.background = 'rgba(59,130,246,0.08)'
-    msg.style.color = 'var(--text-primary)'
-    msg.style.alignSelf = 'flex-start'
-  }
+  msg.className = `chat-message ${who}`
   msg.textContent = text
   chatMessages.appendChild(msg)
   chatMessages.scrollTop = chatMessages.scrollHeight
+}
+
+function showWelcomeMessage() {
+  if (!chatMessages) return
+  const welcomeMsg = document.createElement('div')
+  welcomeMsg.className = 'chat-message welcome'
+  welcomeMsg.textContent = '👋 Welcome! I\'m your AI decision assistant. I can help you analyze past decisions, provide insights, and guide you through complex choices. What would you like to explore today?'
+  chatMessages.appendChild(welcomeMsg)
+  chatMessages.scrollTop = chatMessages.scrollHeight
+}
+
+function clearChatUI() {
+  // Clear chat UI (but keep database)
+  if (chatMessages) {
+    chatMessages.innerHTML = ''
+  }
 }
 
 async function handleSendMessage() {
@@ -956,6 +1043,7 @@ async function handleAddDecision(e) {
   await loadDecisions()
   renderDashboardStats()
   renderMemoryArchive()
+  renderRecentDecisions()
 }
 
 function showMessage(msg, type) {
