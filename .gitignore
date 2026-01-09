@@ -4,6 +4,7 @@
 .env*.local
 
 # API keys (NEVER commit these!)
+config.js
 **/config.local.js
 **/secrets.js
 

@@ -727,7 +727,12 @@ async function handleSendMessage() {
   // Call Gemini API directly (client-side)
   // Note: For production, use the Supabase Edge Function instead to keep the API key secret
   try {
-    const GEMINI_API_KEY = 'AIzaSyCj5aI_IjI5u9pbQZaYObtgp88vzBU0jwU' // Load from .env in production
+    const GEMINI_API_KEY = CONFIG.GEMINI_API_KEY // Loaded from config.js
+    
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
+      appendChatMessage('Error: Gemini API key not configured. Please update config.js with your API key.', 'assistant')
+      return
+    }
     
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
