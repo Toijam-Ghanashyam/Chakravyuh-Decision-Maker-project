@@ -1,0 +1,4 @@
+# Supabase Configuration
+
+[db]
+major_version = 15
