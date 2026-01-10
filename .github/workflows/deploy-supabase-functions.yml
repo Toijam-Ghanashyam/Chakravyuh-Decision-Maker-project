@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20.17.0'
 
       - name: Install Supabase CLI
         run: npm install -g supabase
@@ -46,4 +46,5 @@ jobs:
           supabase functions deploy extract-doc --project-ref "$SUPABASE_REF"
 
       - name: Deployment Complete
+
         run: echo "Supabase Edge Functions deployed. Remember to set function env vars in Supabase dashboard if required (OCR_SPACE_API_KEY, SUPABASE_SERVICE_ROLE_KEY)."
