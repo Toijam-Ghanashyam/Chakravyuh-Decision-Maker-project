@@ -69,3 +69,25 @@ CREATE POLICY "Allow delete own docs" ON public.decision_documents
 -- NOTE:
 -- If your Edge Function uses the SUPABASE_SERVICE_ROLE_KEY to update documents, those updates bypass RLS (service role has full access).
 -- Make sure you keep the service role key secret and only use it in trusted server-side environments (Edge Functions or your backend).
+
+-- STORAGE POLICIES FOR decision_files BUCKET
+-- Allow authenticated users to upload files to decision_files bucket
+DROP POLICY IF EXISTS "Allow uploads to decision_files" ON storage.objects;
+CREATE POLICY "Allow uploads to decision_files" ON storage.objects
+  FOR INSERT 
+  TO authenticated
+  WITH CHECK (bucket_id = 'decision_files');
+
+-- Allow authenticated users to read their own files
+DROP POLICY IF EXISTS "Allow read own files" ON storage.objects;
+CREATE POLICY "Allow read own files" ON storage.objects
+  FOR SELECT
+  TO authenticated
+  USING (bucket_id = 'decision_files' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- Allow authenticated users to delete their own files
+DROP POLICY IF EXISTS "Allow delete own files" ON storage.objects;
+CREATE POLICY "Allow delete own files" ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (bucket_id = 'decision_files' AND (storage.foldername(name))[1] = auth.uid()::text);

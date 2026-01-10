@@ -7,6 +7,7 @@
 
 // @ts-ignore: Deno std import
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
+// @ts-ignore: Supabase ESM import
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 declare const Deno: any

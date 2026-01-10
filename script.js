@@ -59,16 +59,14 @@ const currentUserDisplay = document.getElementById('currentUser')
 const addDecisionForm = document.getElementById('addDecisionForm')
 const decisionTitle = document.getElementById('decisionTitle')
 const decisionDescription = document.getElementById('decisionDescription')
-const decisionIntent = document.getElementById('decisionIntent')
-const decisionConstraints = document.getElementById('decisionConstraints')
-const decisionAlternatives = document.getElementById('decisionAlternatives')
-const decisionFinalChoice = document.getElementById('decisionFinalChoice')
-const decisionFinalReasoning = document.getElementById('decisionFinalReasoning')
 const decisionCategory = document.getElementById('decisionCategory')
 const decisionDate = document.getElementById('decisionDate')
 const decisionNotes = document.getElementById('decisionNotes')
 const decisionFiles = document.getElementById('decisionFiles')
 const addDecisionMessage = document.getElementById('addDecisionMessage')
+// Memory archive filter
+const archiveCategoryFilter = document.getElementById('archiveCategoryFilter')
+
 const chatMessages = document.getElementById('chatMessages')
 const chatInput = document.getElementById('chatInput')
 const chatSend = document.getElementById('chatSend')
@@ -130,6 +128,9 @@ function initializeEventListeners() {
 
   // Team workspace
   if (addTeamMemberBtn) addTeamMemberBtn.addEventListener('click', handleAddTeamMember)
+
+  // Archive filter
+  if (archiveCategoryFilter) archiveCategoryFilter.addEventListener('change', renderMemoryArchive)
 
   // Logout
   logoutBtn.addEventListener("click", handleLogout)
@@ -616,11 +617,18 @@ function renderMemoryArchive() {
   const container = document.getElementById('memoryArchiveList')
   if (!container) return
   container.innerHTML = ''
-  const decisions = (window.decisions || []).slice().sort((a,b) => new Date(b.date) - new Date(a.date))
+  let decisions = (window.decisions || []).slice().sort((a,b) => new Date(b.date) - new Date(a.date))
+
+  const selectedCategory = (archiveCategoryFilter && archiveCategoryFilter.value) ? archiveCategoryFilter.value : ''
+  if (selectedCategory) {
+    decisions = decisions.filter(d => (d.category || '') === selectedCategory)
+  }
+
   if (decisions.length === 0) {
     container.innerHTML = '<div class="search-results-empty">No decisions yet</div>'
     return
   }
+
   decisions.forEach(d => {
     const item = document.createElement('div')
     item.className = 'archive-item'
@@ -635,50 +643,13 @@ function renderMemoryArchive() {
     meta.style.color = 'var(--text-tertiary)'
     meta.textContent = d.category ? d.category : ''
 
-    // Description, intent, constraints, alternatives
+    // Description
     if (d.description) {
       const desc = document.createElement('p')
       desc.style.marginTop = '0.5rem'
       desc.style.color = 'var(--text-secondary)'
       desc.textContent = d.description
       item.appendChild(desc)
-    }
-    if (d.intent) {
-      const intent = document.createElement('p')
-      intent.style.marginTop = '0.25rem'
-      intent.style.color = 'var(--text-tertiary)'
-      intent.innerHTML = '<strong>Intent:</strong> ' + d.intent
-      item.appendChild(intent)
-    }
-    if (d.constraints) {
-      const constraints = document.createElement('p')
-      constraints.style.marginTop = '0.25rem'
-      constraints.style.color = 'var(--text-tertiary)'
-      constraints.innerHTML = '<strong>Constraints:</strong> ' + d.constraints
-      item.appendChild(constraints)
-    }
-    if (d.alternatives) {
-      const alts = document.createElement('p')
-      alts.style.marginTop = '0.25rem'
-      alts.style.color = 'var(--text-tertiary)'
-      alts.innerHTML = '<strong>Alternatives:</strong> ' + d.alternatives
-      item.appendChild(alts)
-    }
-
-    // Final choice and reasoning
-    if (d.final_choice) {
-      const fc = document.createElement('p')
-      fc.style.marginTop = '0.25rem'
-      fc.style.color = 'var(--text-primary)'
-      fc.innerHTML = '<strong>Final Choice:</strong> ' + d.final_choice
-      item.appendChild(fc)
-    }
-    if (d.final_reasoning) {
-      const fr = document.createElement('p')
-      fr.style.marginTop = '0.25rem'
-      fr.style.color = 'var(--text-secondary)'
-      fr.innerHTML = '<strong>Reasoning:</strong> ' + d.final_reasoning
-      item.appendChild(fr)
     }
 
     // Notes fallback
@@ -690,7 +661,26 @@ function renderMemoryArchive() {
       item.appendChild(notes)
     }
 
-    // Documents
+    // View Documents button (calls access-docs edge function)
+    if (d.id) {
+      const btnContainer = document.createElement('div')
+      btnContainer.style.marginTop = '0.75rem'
+      btnContainer.style.display = 'flex'
+      btnContainer.style.gap = '0.5rem'
+      
+      const viewDocBtn = document.createElement('button')
+      viewDocBtn.className = 'btn'
+      viewDocBtn.style.padding = '0.5rem 1rem'
+      viewDocBtn.style.fontSize = '0.85rem'
+      viewDocBtn.textContent = '📄 View Documents'
+      viewDocBtn.addEventListener('click', async () => {
+        await openDocumentsModal(d.id, d.title)
+      })
+      btnContainer.appendChild(viewDocBtn)
+      item.appendChild(btnContainer)
+    }
+
+    // Documents (from d.documents if available from initial load)
     if (d.documents && d.documents.length > 0) {
       const filesHeader = document.createElement('div')
       filesHeader.style.marginTop = '0.5rem'
@@ -987,6 +977,7 @@ async function handleSendMessage() {
   }
 }
 
+// Decision Help — analyze pros & cons and return a leaning (advisory)
 // ====== TEAM WORKSPACE HANDLERS ======
 function renderTeamMembers() {
   const membersList = document.getElementById('teamMembersList')
@@ -1111,18 +1102,13 @@ async function handleAddDecision(e) {
 
   const title = decisionTitle ? decisionTitle.value.trim() : ''
   const description = decisionDescription ? decisionDescription.value.trim() : ''
-  const intent = decisionIntent ? decisionIntent.value.trim() : ''
-  const constraints = decisionConstraints ? decisionConstraints.value.trim() : ''
-  const alternatives = decisionAlternatives ? decisionAlternatives.value.trim() : ''
-  const finalChoice = decisionFinalChoice ? decisionFinalChoice.value.trim() : ''
-  const finalReasoning = decisionFinalReasoning ? decisionFinalReasoning.value.trim() : ''
   const category = decisionCategory ? decisionCategory.value : ''
   const date = decisionDate ? decisionDate.value : ''
   const notes = decisionNotes ? decisionNotes.value.trim() : ''
   const files = decisionFiles ? Array.from(decisionFiles.files || []) : []
 
-  if (!title || !description || !intent || !finalChoice || !category || !date) {
-    showMessage('Please fill in all required fields (title, description, intent, final choice, category, date)', 'error')
+  if (!title || !description || !category || !date) {
+    showMessage('Please fill in all required fields (title, description, category, date)', 'error')
     return
   }
 
@@ -1140,24 +1126,20 @@ async function handleAddDecision(e) {
 
   const userId = userData.user.id
 
-  // Insert decision into Supabase (extended fields)
+  // Insert decision into Supabase (minimal required fields) and return the inserted row
   const { data, error } = await supabaseClient
     .from('decisions')
     .insert([
       {
         title,
         description: description || null,
-        intent: intent || null,
-        constraints: constraints || null,
-        alternatives: alternatives || null,
-        final_choice: finalChoice || null,
-        final_reasoning: finalReasoning || null,
         category,
         date,
         user_id: userId,
         notes: notes || null,
       },
     ])
+    .select()
 
   if (error) {
     console.error('Failed to add decision', error)
@@ -1165,7 +1147,7 @@ async function handleAddDecision(e) {
     return
   }
 
-  // The inserted decision (returning) — some Supabase setups return an array with the inserted row
+  // The inserted decision (returning)
   const insertedDecision = Array.isArray(data) && data.length ? data[0] : data
   const decisionId = insertedDecision?.id || null
 
@@ -1190,31 +1172,78 @@ async function handleAddDecision(e) {
           const { error: uploadError } = await supabaseClient.storage.from('decision_files').upload(filePath, file)
           if (uploadError) {
             console.warn('File upload failed for', file.name, uploadError)
+            // continue to next file rather than throwing
+            continue
           }
-          const { data: publicUrlData } = supabaseClient.storage.from('decision_files').getPublicUrl(filePath)
-          const publicUrl = publicUrlData?.publicUrl || null
 
-          // Insert document metadata
-          const { error: docError } = await supabaseClient.from('decision_documents').insert([
+          // Try to get a public URL first
+          let publicUrl = null
+          try {
+            const { data: publicUrlData } = supabaseClient.storage.from('decision_files').getPublicUrl(filePath)
+            publicUrl = publicUrlData?.publicUrl || null
+          } catch (e) {
+            console.warn('Failed to get public URL for', filePath, e)
+          }
+
+          // If public URL is not available (private bucket), try creating a signed URL (1 hour)
+          if (!publicUrl) {
+            try {
+              const { data: signedData, error: signedErr } = await supabaseClient.storage.from('decision_files').createSignedUrl(filePath, 60 * 60)
+              if (signedErr) {
+                console.warn('Signed URL creation failed', signedErr)
+              } else {
+                publicUrl = signedData?.signedURL || null
+              }
+            } catch (e) {
+              console.warn('Signed URL creation threw', e)
+            }
+          }
+
+          // Get the absolute current user from session (not cached)
+          const { data: sessionData } = await supabaseClient.auth.getSession()
+          const sessionUserId = sessionData?.session?.user?.id
+
+          if (!sessionUserId) {
+            console.error('No active session found for document insert')
+            showMessage('Decision saved but attachments could not be recorded: no active session. Please sign in again.', 'error')
+            continue
+          }
+
+          // Insert document metadata using the current session's user_id
+          const { data: docData, error: docError } = await supabaseClient.from('decision_documents').insert([
             {
               decision_id: decisionId,
-              user_id: userId,
+              user_id: sessionUserId,
               file_name: file.name,
               file_url: publicUrl,
               extracted_text: extracted_text || null,
             },
-          ])
+          ]).select()
 
           if (docError) {
             console.warn('Failed to record document metadata', docError)
+            const msg = String(docError?.message || docError).toLowerCase()
+            if (msg.includes('row-level') || msg.includes('row level')) {
+              console.error('RLS blocked insert: ensure the user session is active and `user_id` equals auth.uid().')
+              showMessage('Decision saved but attachments could not be recorded due to DB row-level security. Please sign in again and try.', 'error')
+            } else {
+              // surface a user-visible message but do not block saving the decision
+              showMessage('Decision saved but failed to record one or more attachments (see console).', 'error')
+            }
           }
         } catch (err) {
           console.warn('Error uploading file', err)
+          showMessage('Decision saved but file upload failed for ' + file.name + '. See console for details.', 'error')
         }
       }
     } catch (err) {
       console.warn('File processing error', err)
+      showMessage('Decision saved but there was an error processing attachments.', 'error')
     }
+  } else if (files.length > 0 && !decisionId) {
+    // This is an important failure mode — ensure we surface it
+    console.error('Decision saved but no decision ID returned; attachments were not uploaded.')
+    showMessage('Decision saved, but attachments could not be uploaded (missing decision id).', 'error')
   }
 
   showMessage('Decision saved successfully!', 'success')
@@ -1225,6 +1254,167 @@ async function handleAddDecision(e) {
   renderDashboardStats()
   renderMemoryArchive()
   renderRecentDecisions()
+}
+
+// Open documents modal via access-docs edge function
+async function openDocumentsModal(decisionId, decisionTitle) {
+  if (!supabaseClient) {
+    alert('Supabase not configured. Cannot load documents.')
+    return
+  }
+
+  // Get the edge function URL from your Supabase project
+  // Format: https://<project-ref>.supabase.co/functions/v1/access-docs
+  const SUPABASE_URL = 'https://ckeubdntzjjjzzmmaqpk.supabase.co'
+  const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/access-docs?decisionId=${decisionId}`
+
+  try {
+    // Get auth session to pass Authorization header
+    const { data: userData } = await supabaseClient.auth.getUser()
+    const authToken = userData?.user?.id ? (await supabaseClient.auth.getSession()).data?.session?.access_token : null
+
+    // Call the edge function
+    const response = await fetch(edgeFunctionUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+      }
+    })
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}))
+      console.error('Failed to fetch documents from edge function', errData)
+      alert('Failed to load documents: ' + (errData?.error || response.status))
+      return
+    }
+
+    const { documents } = await response.json()
+
+    // Display documents in a simple modal/overlay
+    showDocumentsOverlay(documents, decisionTitle)
+  } catch (err) {
+    console.error('Error calling access-docs function', err)
+    alert('Error loading documents: ' + err.message)
+  }
+}
+
+function showDocumentsOverlay(documents, decisionTitle) {
+  // Create modal overlay
+  const overlay = document.createElement('div')
+  overlay.style.position = 'fixed'
+  overlay.style.top = '0'
+  overlay.style.left = '0'
+  overlay.style.width = '100%'
+  overlay.style.height = '100%'
+  overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'
+  overlay.style.display = 'flex'
+  overlay.style.alignItems = 'center'
+  overlay.style.justifyContent = 'center'
+  overlay.style.zIndex = '9999'
+
+  const modal = document.createElement('div')
+  modal.style.backgroundColor = 'var(--surface)'
+  modal.style.color = 'var(--text-primary)'
+  modal.style.borderRadius = '12px'
+  modal.style.padding = '2rem'
+  modal.style.maxWidth = '600px'
+  modal.style.maxHeight = '80vh'
+  modal.style.overflowY = 'auto'
+  modal.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.2)'
+  modal.style.border = '1px solid var(--border)'
+
+  const title = document.createElement('h3')
+  title.textContent = `Documents for: ${decisionTitle}`
+  title.style.marginBottom = '1rem'
+  modal.appendChild(title)
+
+  if (!documents || documents.length === 0) {
+    const noDocsMsg = document.createElement('p')
+    noDocsMsg.textContent = 'No documents found for this decision.'
+    noDocsMsg.style.color = 'var(--text-secondary)'
+    modal.appendChild(noDocsMsg)
+  } else {
+    const docList = document.createElement('div')
+    docList.style.display = 'flex'
+    docList.style.flexDirection = 'column'
+    docList.style.gap = '1rem'
+
+    documents.forEach((doc) => {
+      const docItem = document.createElement('div')
+      docItem.style.padding = '1rem'
+      docItem.style.backgroundColor = 'var(--background)'
+      docItem.style.borderRadius = '8px'
+      docItem.style.border = '1px solid var(--border)'
+
+      const fileName = document.createElement('div')
+      fileName.style.fontWeight = '600'
+      fileName.style.marginBottom = '0.5rem'
+      fileName.textContent = doc.file_name || 'Unnamed Document'
+
+      const fileLink = document.createElement('a')
+      fileLink.href = doc.file_url || '#'
+      fileLink.target = '_blank'
+      fileLink.rel = 'noopener noreferrer'
+      fileLink.style.color = 'var(--primary)'
+      fileLink.style.textDecoration = 'none'
+      fileLink.textContent = '🔗 Open File'
+
+      const linkContainer = document.createElement('div')
+      linkContainer.style.marginBottom = '0.5rem'
+      linkContainer.appendChild(fileLink)
+
+      docItem.appendChild(fileName)
+      docItem.appendChild(linkContainer)
+
+      if (doc.extracted_text) {
+        const extractedLabel = document.createElement('div')
+        extractedLabel.style.fontSize = '0.85rem'
+        extractedLabel.style.color = 'var(--text-tertiary)'
+        extractedLabel.style.marginBottom = '0.25rem'
+        extractedLabel.textContent = 'Extracted Text:'
+        
+        const extractedText = document.createElement('p')
+        extractedText.style.fontSize = '0.875rem'
+        extractedText.style.color = 'var(--text-secondary)'
+        extractedText.style.margin = '0'
+        extractedText.style.padding = '0.5rem'
+        extractedText.style.backgroundColor = 'var(--surface)'
+        extractedText.style.borderRadius = '4px'
+        extractedText.style.maxHeight = '200px'
+        extractedText.style.overflowY = 'auto'
+        extractedText.textContent = doc.extracted_text
+        
+        docItem.appendChild(extractedLabel)
+        docItem.appendChild(extractedText)
+      }
+
+      docList.appendChild(docItem)
+    })
+
+    modal.appendChild(docList)
+  }
+
+  // Close button
+  const closeBtn = document.createElement('button')
+  closeBtn.className = 'btn'
+  closeBtn.style.marginTop = '1.5rem'
+  closeBtn.style.width = '100%'
+  closeBtn.textContent = 'Close'
+  closeBtn.addEventListener('click', () => {
+    overlay.remove()
+  })
+  modal.appendChild(closeBtn)
+
+  overlay.appendChild(modal)
+  document.body.appendChild(overlay)
+
+  // Close on backdrop click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.remove()
+    }
+  })
 }
 
 function showMessage(msg, type) {
