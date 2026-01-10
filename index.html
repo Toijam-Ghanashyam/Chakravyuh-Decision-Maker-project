@@ -204,6 +204,37 @@
                     <label for="decisionTitle">Decision Title</label>
                     <input type="text" id="decisionTitle" placeholder="e.g., Market Entry Strategy" required>
                   </div>
+
+                  <div class="form-group">
+                    <label for="decisionDescription">Decision Description</label>
+                    <textarea id="decisionDescription" placeholder="Describe the decision in detail..." rows="3" required></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="decisionIntent">User Intent / Goal</label>
+                    <input type="text" id="decisionIntent" placeholder="e.g., Enter new market to increase revenue" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="decisionConstraints">Constraints (time, cost, risk, limitations)</label>
+                    <textarea id="decisionConstraints" placeholder="List constraints (time, cost, risk, limitations)..." rows="2"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="decisionAlternatives">Considered Alternatives</label>
+                    <textarea id="decisionAlternatives" placeholder="Describe alternatives that were considered..." rows="3"></textarea>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="decisionFinalChoice">Final Choice</label>
+                    <input type="text" id="decisionFinalChoice" placeholder="Which option was chosen and why (short)" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label for="decisionFinalReasoning">Final Choice — Reasoning</label>
+                    <textarea id="decisionFinalReasoning" placeholder="Explain the reasoning and evidence behind the final choice..." rows="3"></textarea>
+                  </div>
+
                   <div class="form-group">
                     <label for="decisionCategory">Category</label>
                     <select id="decisionCategory" required>
@@ -217,14 +248,23 @@
                       <option value="Other">Other</option>
                     </select>
                   </div>
+
                   <div class="form-group">
                     <label for="decisionDate">Decision Date</label>
                     <input type="date" id="decisionDate" required>
                   </div>
+
                   <div class="form-group">
                     <label for="decisionNotes">Notes (optional)</label>
-                    <textarea id="decisionNotes" placeholder="Add any additional notes..." rows="4"></textarea>
+                    <textarea id="decisionNotes" placeholder="Add any additional notes..." rows="3"></textarea>
                   </div>
+
+                  <div class="form-group">
+                    <label for="decisionFiles">Related documents (upload any supporting files)</label>
+                    <input type="file" id="decisionFiles" multiple />
+                    <small style="display:block; color:var(--text-tertiary); margin-top:0.25rem;">Text files will be parsed in the browser; PDF/images will be uploaded and processed server-side if that backend extractor is available.</small>
+                  </div>
+
                   <button type="submit" class="btn btn-primary">Save Decision</button>
                   <div id="addDecisionMessage" class="form-message" style="display:none; margin-top:1rem; padding:0.75rem; border-radius:8px;"></div>
                 </form>

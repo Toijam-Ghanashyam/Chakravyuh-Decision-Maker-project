@@ -58,9 +58,16 @@ const showLoginBtn = document.getElementById('showLoginBtn')
 const currentUserDisplay = document.getElementById('currentUser')
 const addDecisionForm = document.getElementById('addDecisionForm')
 const decisionTitle = document.getElementById('decisionTitle')
+const decisionDescription = document.getElementById('decisionDescription')
+const decisionIntent = document.getElementById('decisionIntent')
+const decisionConstraints = document.getElementById('decisionConstraints')
+const decisionAlternatives = document.getElementById('decisionAlternatives')
+const decisionFinalChoice = document.getElementById('decisionFinalChoice')
+const decisionFinalReasoning = document.getElementById('decisionFinalReasoning')
 const decisionCategory = document.getElementById('decisionCategory')
 const decisionDate = document.getElementById('decisionDate')
 const decisionNotes = document.getElementById('decisionNotes')
+const decisionFiles = document.getElementById('decisionFiles')
 const addDecisionMessage = document.getElementById('addDecisionMessage')
 const chatMessages = document.getElementById('chatMessages')
 const chatInput = document.getElementById('chatInput')
@@ -542,6 +549,32 @@ async function loadDecisions() {
   }
 
   window.decisions = data || []
+
+  // Load attached documents (if any) and attach them to decisions
+  try {
+    const decisionIds = (window.decisions || []).map(d => d.id).filter(Boolean)
+    if (decisionIds.length > 0) {
+      const { data: docs, error: docsError } = await supabaseClient
+        .from('decision_documents')
+        .select('*')
+        .in('decision_id', decisionIds)
+
+      if (docsError) {
+        console.warn('Failed to load decision documents', docsError)
+      } else {
+        // Map docs to decisions
+        const docsByDecision = {}
+        ;(docs || []).forEach(doc => {
+          if (!docsByDecision[doc.decision_id]) docsByDecision[doc.decision_id] = []
+          docsByDecision[doc.decision_id].push(doc)
+        })
+        window.decisions = (window.decisions || []).map(d => ({ ...(d || {}), documents: docsByDecision[d.id] || [] }))
+      }
+    }
+  } catch (e) {
+    console.warn('Error attaching documents to decisions', e)
+  }
+
   // Update UI after loading
   try { 
     renderDashboardStats()
@@ -601,20 +634,95 @@ function renderMemoryArchive() {
     meta.style.fontSize = '0.9rem'
     meta.style.color = 'var(--text-tertiary)'
     meta.textContent = d.category ? d.category : ''
+
+    // Description, intent, constraints, alternatives
+    if (d.description) {
+      const desc = document.createElement('p')
+      desc.style.marginTop = '0.5rem'
+      desc.style.color = 'var(--text-secondary)'
+      desc.textContent = d.description
+      item.appendChild(desc)
+    }
+    if (d.intent) {
+      const intent = document.createElement('p')
+      intent.style.marginTop = '0.25rem'
+      intent.style.color = 'var(--text-tertiary)'
+      intent.innerHTML = '<strong>Intent:</strong> ' + d.intent
+      item.appendChild(intent)
+    }
+    if (d.constraints) {
+      const constraints = document.createElement('p')
+      constraints.style.marginTop = '0.25rem'
+      constraints.style.color = 'var(--text-tertiary)'
+      constraints.innerHTML = '<strong>Constraints:</strong> ' + d.constraints
+      item.appendChild(constraints)
+    }
+    if (d.alternatives) {
+      const alts = document.createElement('p')
+      alts.style.marginTop = '0.25rem'
+      alts.style.color = 'var(--text-tertiary)'
+      alts.innerHTML = '<strong>Alternatives:</strong> ' + d.alternatives
+      item.appendChild(alts)
+    }
+
+    // Final choice and reasoning
+    if (d.final_choice) {
+      const fc = document.createElement('p')
+      fc.style.marginTop = '0.25rem'
+      fc.style.color = 'var(--text-primary)'
+      fc.innerHTML = '<strong>Final Choice:</strong> ' + d.final_choice
+      item.appendChild(fc)
+    }
+    if (d.final_reasoning) {
+      const fr = document.createElement('p')
+      fr.style.marginTop = '0.25rem'
+      fr.style.color = 'var(--text-secondary)'
+      fr.innerHTML = '<strong>Reasoning:</strong> ' + d.final_reasoning
+      item.appendChild(fr)
+    }
+
+    // Notes fallback
     if (d.notes) {
       const notes = document.createElement('p')
       notes.style.marginTop = '0.5rem'
       notes.style.color = 'var(--text-secondary)'
       notes.textContent = d.notes
-      item.appendChild(title)
-      item.appendChild(date)
-      item.appendChild(meta)
       item.appendChild(notes)
-    } else {
-      item.appendChild(title)
-      item.appendChild(date)
-      item.appendChild(meta)
     }
+
+    // Documents
+    if (d.documents && d.documents.length > 0) {
+      const filesHeader = document.createElement('div')
+      filesHeader.style.marginTop = '0.5rem'
+      filesHeader.style.fontSize = '0.9rem'
+      filesHeader.style.color = 'var(--text-tertiary)'
+      filesHeader.innerHTML = '<strong>Attachments:</strong>'
+      item.appendChild(filesHeader)
+
+      d.documents.forEach(doc => {
+        const row = document.createElement('div')
+        row.style.marginTop = '0.25rem'
+        const link = document.createElement('a')
+        link.href = doc.file_url || '#'
+        link.target = '_blank'
+        link.rel = 'noopener noreferrer'
+        link.textContent = doc.file_name || 'Document'
+        row.appendChild(link)
+        if (doc.extracted_text) {
+          const excerpt = document.createElement('p')
+          excerpt.style.marginTop = '0.25rem'
+          excerpt.style.color = 'var(--text-secondary)'
+          excerpt.style.fontSize = '0.9rem'
+          excerpt.textContent = doc.extracted_text.slice(0, 300) + (doc.extracted_text.length > 300 ? '...' : '')
+          row.appendChild(excerpt)
+        }
+        item.appendChild(row)
+      })
+    }
+
+    item.appendChild(title)
+    item.appendChild(date)
+    item.appendChild(meta)
     container.appendChild(item)
   })
 }
@@ -702,10 +810,18 @@ function buildDecisionContext(decisions) {
   return decisions
     .slice(0, 10) // Last 10 decisions for context
     .map((d, i) => {
+      const docsSummary = (d.documents && d.documents.length)
+        ? '\nDocuments:\n' + d.documents.map(doc => `- ${doc.file_name}${doc.extracted_text ? ' (parsed)' : ''}${doc.file_url ? `: ${doc.file_url}` : ''}${doc.extracted_text ? '\n  Extracted: ' + (doc.extracted_text.slice(0, 200).replace(/\n/g, ' ')) + (doc.extracted_text.length > 200 ? '...' : '') : ''}`)
+            .join('\n')
+        : ''
+
       return `Decision ${i + 1}: "${d.title}"
 Category: ${d.category || 'N/A'}
 Date: ${d.date || 'N/A'}
-Notes/Reasoning: ${d.notes || 'No notes recorded'}
+Intent/Goal: ${d.intent || 'N/A'}
+Constraints: ${d.constraints || 'N/A'}
+Final Choice: ${d.final_choice || 'N/A'}
+Reasoning: ${d.final_reasoning || d.notes || 'No notes recorded'}${docsSummary}
 ---`
     })
     .join('\n')
@@ -994,12 +1110,19 @@ async function handleAddDecision(e) {
   e.preventDefault()
 
   const title = decisionTitle ? decisionTitle.value.trim() : ''
+  const description = decisionDescription ? decisionDescription.value.trim() : ''
+  const intent = decisionIntent ? decisionIntent.value.trim() : ''
+  const constraints = decisionConstraints ? decisionConstraints.value.trim() : ''
+  const alternatives = decisionAlternatives ? decisionAlternatives.value.trim() : ''
+  const finalChoice = decisionFinalChoice ? decisionFinalChoice.value.trim() : ''
+  const finalReasoning = decisionFinalReasoning ? decisionFinalReasoning.value.trim() : ''
   const category = decisionCategory ? decisionCategory.value : ''
   const date = decisionDate ? decisionDate.value : ''
   const notes = decisionNotes ? decisionNotes.value.trim() : ''
+  const files = decisionFiles ? Array.from(decisionFiles.files || []) : []
 
-  if (!title || !category || !date) {
-    showMessage('Please fill in all required fields', 'error')
+  if (!title || !description || !intent || !finalChoice || !category || !date) {
+    showMessage('Please fill in all required fields (title, description, intent, final choice, category, date)', 'error')
     return
   }
 
@@ -1017,12 +1140,18 @@ async function handleAddDecision(e) {
 
   const userId = userData.user.id
 
-  // Insert decision into Supabase
+  // Insert decision into Supabase (extended fields)
   const { data, error } = await supabaseClient
     .from('decisions')
     .insert([
       {
         title,
+        description: description || null,
+        intent: intent || null,
+        constraints: constraints || null,
+        alternatives: alternatives || null,
+        final_choice: finalChoice || null,
+        final_reasoning: finalReasoning || null,
         category,
         date,
         user_id: userId,
@@ -1036,10 +1165,62 @@ async function handleAddDecision(e) {
     return
   }
 
+  // The inserted decision (returning) — some Supabase setups return an array with the inserted row
+  const insertedDecision = Array.isArray(data) && data.length ? data[0] : data
+  const decisionId = insertedDecision?.id || null
+
+  // If the user attached files, upload them to Supabase Storage and record metadata
+  if (files.length > 0 && decisionId) {
+    try {
+      for (const file of files) {
+        // Try to extract text in-browser for plain text files
+        let extracted_text = null
+        if (file.type && file.type.startsWith('text/')) {
+          extracted_text = await new Promise((resolve) => {
+            const reader = new FileReader()
+            reader.onload = (ev) => resolve(String(ev.target.result))
+            reader.onerror = () => resolve(null)
+            reader.readAsText(file)
+          })
+        }
+
+        // Upload to storage (bucket: 'decision_files', path: userId/decisionId/timestamp_filename)
+        const filePath = `${userId}/${decisionId}/${Date.now()}_${file.name}`
+        try {
+          const { error: uploadError } = await supabaseClient.storage.from('decision_files').upload(filePath, file)
+          if (uploadError) {
+            console.warn('File upload failed for', file.name, uploadError)
+          }
+          const { data: publicUrlData } = supabaseClient.storage.from('decision_files').getPublicUrl(filePath)
+          const publicUrl = publicUrlData?.publicUrl || null
+
+          // Insert document metadata
+          const { error: docError } = await supabaseClient.from('decision_documents').insert([
+            {
+              decision_id: decisionId,
+              user_id: userId,
+              file_name: file.name,
+              file_url: publicUrl,
+              extracted_text: extracted_text || null,
+            },
+          ])
+
+          if (docError) {
+            console.warn('Failed to record document metadata', docError)
+          }
+        } catch (err) {
+          console.warn('Error uploading file', err)
+        }
+      }
+    } catch (err) {
+      console.warn('File processing error', err)
+    }
+  }
+
   showMessage('Decision saved successfully!', 'success')
   addDecisionForm.reset()
 
-  // Reload decisions to show new one
+  // Reload decisions to show new one and attached documents
   await loadDecisions()
   renderDashboardStats()
   renderMemoryArchive()
