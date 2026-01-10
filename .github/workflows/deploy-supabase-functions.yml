@@ -22,7 +22,10 @@ jobs:
           node-version: '20.17.0'
 
       - name: Install Supabase CLI
-        run: npm install -g supabase
+        run: |
+           wget https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz
+           tar -xzf supabase_linux_amd64.tar.gz
+           sudo mv supabase /usr/local/bin/
 
       - name: Login to Supabase CLI
         env:
@@ -48,3 +51,4 @@ jobs:
       - name: Deployment Complete
 
         run: echo "Supabase Edge Functions deployed. Remember to set function env vars in Supabase dashboard if required (OCR_SPACE_API_KEY, SUPABASE_SERVICE_ROLE_KEY)."
+
