@@ -23,9 +23,12 @@ jobs:
 
       - name: Install Supabase CLI
         run: |
-           wget https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz
-           tar -xzf supabase_linux_amd64.tar.gz
-           sudo mv supabase /usr/local/bin/
+            wget -qO supabase_linux_amd64.tar.gz https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz
+            mkdir -p /tmp/supabase_install
+            tar -xzf supabase_linux_amd64.tar.gz -C /tmp/supabase_install
+            sudo mv /tmp/supabase_install/supabase /usr/local/bin/
+            sudo chmod +x /usr/local/bin/supabase
+            rm -rf /tmp/supabase_install supabase_linux_amd64.tar.gz
 
       - name: Login to Supabase CLI
         env:
@@ -51,4 +54,5 @@ jobs:
       - name: Deployment Complete
 
         run: echo "Supabase Edge Functions deployed. Remember to set function env vars in Supabase dashboard if required (OCR_SPACE_API_KEY, SUPABASE_SERVICE_ROLE_KEY)."
+
 
