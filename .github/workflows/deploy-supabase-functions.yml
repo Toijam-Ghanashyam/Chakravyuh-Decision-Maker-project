@@ -36,7 +36,7 @@ jobs:
             echo "ERROR: SUPABASE_ACCESS_TOKEN secret is not set."
             exit 1
           fi
-          supabase login --access-token "$SUPABASE_ACCESS_TOKEN"
+          supabase login --token "$SUPABASE_ACCESS_TOKEN"
 
       - name: Deploy Edge Functions
         env:
@@ -52,6 +52,7 @@ jobs:
       - name: Deployment Complete
 
         run: echo "Supabase Edge Functions deployed. Remember to set function env vars in Supabase dashboard if required (OCR_SPACE_API_KEY, SUPABASE_SERVICE_ROLE_KEY)."
+
 
 
 
