@@ -6,6 +6,10 @@
   <title>Decision Intelligence Dashboard</title>
   <link rel="stylesheet" href="styles.css">
   <script src="config.js"></script>
+  <script>
+    // Safe fallback when config.js is missing (prevents runtime errors in dev)
+    window.CONFIG = window.CONFIG || { GEMINI_API_KEY: 'YOUR_GEMINI_API_KEY_HERE' };
+  </script>
 </head>
 <body>
   <div id="app" class="app-container">
@@ -182,7 +186,10 @@
                   <div class="chat-input" style="display:flex; gap:0.5rem;">
                     <input id="chatInput" type="text" placeholder="Ask the AI about decisions..." style="flex:1; padding:0.75rem; border-radius:8px; border:1px solid var(--border); background:var(--background); color:var(--text-primary);" />
                     <button id="chatSend" class="btn btn-primary">Send</button>
+                    <!-- Dev-only: quick test button to call the ai-chat function and display its raw reply -->
+                    <button id="testAiBtn" class="btn" title="Dev: call ai-chat directly">Test AI</button>
                   </div>
+                  <div id="aiTestOutput" style="margin-top:0.5rem; color:var(--text-secondary); font-size:0.95rem;"></div>
                 </div>
               </div>
             </div>

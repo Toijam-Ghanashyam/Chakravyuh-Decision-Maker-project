@@ -70,6 +70,8 @@ const archiveCategoryFilter = document.getElementById('archiveCategoryFilter')
 const chatMessages = document.getElementById('chatMessages')
 const chatInput = document.getElementById('chatInput')
 const chatSend = document.getElementById('chatSend')
+const testAiBtn = document.getElementById('testAiBtn')
+const aiTestOutput = document.getElementById('aiTestOutput')
 const teamMemberEmail = document.getElementById('teamMemberEmail')
 const addTeamMemberBtn = document.getElementById('addTeamMemberBtn')
 const teamMembersList = document.getElementById('teamMembersList')
@@ -124,6 +126,7 @@ function initializeEventListeners() {
 
   // Chat
   if (chatSend) chatSend.addEventListener('click', handleSendMessage)
+  if (testAiBtn) testAiBtn.addEventListener('click', handleTestAi)
   if (chatInput) chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleSendMessage() } })
 
   // Team workspace
@@ -907,48 +910,60 @@ async function handleSendMessage() {
   // Build system prompt enforcing advisory role and context-awareness
   const systemPrompt = buildSystemPrompt(decisionContext, q)
 
-  // Call Gemini API directly (client-side)
-  // Note: For production, use the Supabase Edge Function instead to keep the API key secret
+  // Use Supabase Edge Function `ai-chat` (server-side) to keep the Gemini API key secret
   try {
-    const GEMINI_API_KEY = CONFIG.GEMINI_API_KEY // Loaded from config.js
-    
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
-      appendChatMessage('Error: Gemini API key not configured. Please update config.js with your API key.', 'assistant')
-      return
+    const payload = { systemPrompt, userQuestion: q }
+
+    let reply = null
+
+    // Preferred: use the Supabase client to invoke the function (if available)
+    if (supabaseClient && supabaseClient.functions) {
+      try {
+        const res = await supabaseClient.functions.invoke('ai-chat', { body: JSON.stringify(payload) })
+        // Handle different client-return shapes (Fetch Response or { data, error })
+        if (res && typeof res.json === 'function') {
+          const json = await res.json()
+          if (res.status && res.status >= 400) {
+            console.error('ai-chat error', res.status, json)
+            appendChatMessage('AI reply failed: ' + (json?.error || `Error ${res.status}`), 'assistant')
+            return
+          }
+          reply = json?.reply || null
+        } else if (res && res.data) {
+          if (res.error) {
+            console.error('ai-chat error', res.error)
+            appendChatMessage('AI reply failed: ' + (res.error?.message || res.error), 'assistant')
+            return
+          }
+          reply = res.data?.reply || null
+        }
+      } catch (invokeErr) {
+        console.warn('functions.invoke failed, will try REST endpoint fallback', invokeErr)
+      }
     }
-    
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
+
+    // Fallback: direct POST to Supabase Functions REST endpoint using anon key
+    if (!reply) {
+      const functionsUrl = SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/ai-chat'
+      const res = await fetch(functionsUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
         },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: systemPrompt }],
-            },
-          ],
-          generationConfig: {
-            maxOutputTokens: 5000,
-            temperature: 0.7,
-          },
-        }),
-      }
-    )
+        body: JSON.stringify(payload),
+      })
 
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      const errorMsg = errorData?.error?.message || `Error ${res.status}`
-      console.error('Gemini API error', res.status, errorMsg)
-      appendChatMessage('AI reply failed: ' + errorMsg, 'assistant')
-      return
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        appendChatMessage('AI reply failed: ' + (errorData?.error || `Error ${res.status}`), 'assistant')
+        return
+      }
+
+      const json = await res.json()
+      reply = json?.reply || 'No reply'
     }
 
-    const payload = await res.json()
-    const reply = payload?.candidates?.[0]?.content?.parts?.[0]?.text || 'No reply'
     appendChatMessage(reply, 'assistant')
 
     // Persist assistant reply
@@ -963,7 +978,47 @@ async function handleSendMessage() {
     }
   } catch (err) {
     console.error('AI request failed', err)
-    appendChatMessage('AI request failed: ' + err.message, 'assistant')
+    appendChatMessage('AI request failed: ' + (err && err.message ? err.message : String(err)), 'assistant')
+  }
+}
+
+// Helper: invoke the Supabase Edge Function `ai-chat` and return the reply (throws on failure)
+async function invokeAiChat(systemPrompt, userQuestion) {
+  const payload = { systemPrompt, userQuestion }
+
+  // Use REST endpoint with apikey header only (simpler and avoids JWT validation issues)
+  const functionsUrl = SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/ai-chat'
+  const res = await fetch(functionsUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err?.error || err?.message || `Error ${res.status}`)
+  }
+
+  const json = await res.json()
+  return json?.reply || null
+}
+
+// Dev-only handler: call ai-chat and show raw reply in the UI (does not persist messages)
+async function handleTestAi() {
+  const q = (chatInput && chatInput.value.trim()) || 'Hello from Test'
+  const decisionContext = buildDecisionContext(window.decisions || [])
+  const systemPrompt = buildSystemPrompt(decisionContext, q)
+  if (aiTestOutput) aiTestOutput.textContent = 'Testing...'
+  try {
+    const reply = await invokeAiChat(systemPrompt, q)
+    if (aiTestOutput) aiTestOutput.textContent = reply || 'No reply'
+    console.log('ai-chat test reply:', reply)
+  } catch (err) {
+    if (aiTestOutput) aiTestOutput.textContent = 'Test failed: ' + (err && err.message ? err.message : String(err))
+    console.error('ai-chat test failed', err)
   }
 }
 

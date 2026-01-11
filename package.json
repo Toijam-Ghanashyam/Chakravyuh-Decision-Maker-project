@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "gen-config": "node scripts/generate-config-from-env.js",
     "lint": "eslint ."
   },
   "dependencies": {

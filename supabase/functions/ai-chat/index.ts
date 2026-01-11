@@ -20,9 +20,25 @@ serve(async (req: Request) => {
     // Get apikey or Authorization token from request headers
     const apikey = req.headers.get('apikey')
     const authHeader = req.headers.get('authorization')
-    
-    // Verify that at least one auth method is provided
+
+    // TEMP DEBUG: Log presence of auth headers (mask values) to help diagnose 401s
+    try {
+      console.log('ai-chat debug: incoming request', {
+        method: req.method,
+        url: req.url,
+        has_apikey: !!apikey,
+        apikey_masked: apikey ? (apikey.slice(0, 4) + '...') : null,
+        has_auth: !!authHeader,
+        auth_masked: authHeader ? (authHeader.length > 10 ? authHeader.slice(0, 10) + '...' : authHeader) : null,
+      })
+    } catch (e) {
+      // ignore logging errors
+    }
+
+    // Accept request if either apikey OR authorization header is present
+    // Don't validate JWT - just check for presence to prevent unauthorized calls
     if (!apikey && !authHeader) {
+      console.error('ai-chat debug: Unauthorized - missing both apikey & authorization headers')
       return new Response(
         JSON.stringify({ error: "Unauthorized: Missing API key or auth token" }),
         {
@@ -65,7 +81,7 @@ serve(async (req: Request) => {
 
     // Call Gemini API
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
       {
         method: "POST",
         headers: {

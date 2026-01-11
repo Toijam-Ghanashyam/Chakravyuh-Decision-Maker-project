@@ -11,7 +11,20 @@ cd chakravyuh1.0
 ### 2. Configure API Keys
 The project requires a Gemini API key to function. Here's how to set it up:
 
-#### Option A: Using config.js (Recommended)
+#### Option A: Using `.env` (Recommended) ✅
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Open `.env` and replace `GEMINI_API_KEY` with your actual Gemini API key.
+3. Generate the runtime `config.js` (used by the static client) from your `.env`:
+   ```bash
+   npm run gen-config
+   ```
+   - This writes a `config.js` file at project root which contains your `GEMINI_API_KEY` for local development.
+   - `config.js` is ignored by git; do NOT commit it.
+
+#### Option B: Using `config.js` (Manual, legacy)
 1. Copy `config.example.js` to `config.js`:
    ```bash
    cp config.example.js config.js
@@ -19,18 +32,14 @@ The project requires a Gemini API key to function. Here's how to set it up:
 2. Open `config.js` and replace `YOUR_GEMINI_API_KEY_HERE` with your actual Gemini API key
 3. This file is automatically ignored by git and will not be committed
 
-#### Option B: Using .env file
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Fill in your API keys in the `.env` file
-3. This file is also ignored by git
+#### Notes
+- For production, prefer keeping secrets server-side (e.g., use the Supabase Edge Function) rather than exposing keys in client-side code. The client now calls the `ai-chat` Edge Function by default — make sure you deploy it and set the `GEMINI_API_KEY` secret in your Supabase project.
+- Both `.env` and `config.js` are ignored by git.
 
 ### 3. Get Your Gemini API Key
 1. Visit [Google AI Studio](https://aistudio.google.com/apikey)
 2. Create a new API key
-3. Copy it to `config.js` or `.env`
+3. Copy it to `.env` (recommended) or `config.js` (manual)
 
 ### 4. Development
 Simply open `index.html` in your browser or serve it with a local web server:
