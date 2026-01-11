@@ -39,7 +39,8 @@ jobs:
           
           # Deploy using the project ID variable
           supabase functions deploy ai-chat --project-ref "$SUPABASE_PROJECT_ID"
-          supabase functions deploy extract-doc --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy access-docs --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Deployment Complete
         run: echo "Deployment finished."
+
