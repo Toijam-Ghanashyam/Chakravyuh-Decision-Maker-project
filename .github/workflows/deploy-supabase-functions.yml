@@ -16,43 +16,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # --------------------------------------------------------
+      # FIX: Use the official action instead of manual wget/rm
+      # This installs the CLI safely without deleting your files.
+      # --------------------------------------------------------
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
         with:
-          node-version: '20.17.0'
-
-      - name: Install Supabase CLI
-        run: |
-            rm -rf supabase      # Add this line to forcibly remove any existing 'supabase' directory
-            wget https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz
-            tar -xzf supabase_linux_amd64.tar.gz
-            sudo mv supabase /usr/local/bin/supabase
-            
-      - name: Login to Supabase CLI
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
-            echo "ERROR: SUPABASE_ACCESS_TOKEN secret is not set."
-            exit 1
-          fi
-          supabase login --token "$SUPABASE_ACCESS_TOKEN"
+          version: latest
 
       - name: Deploy Edge Functions
         env:
-          SUPABASE_REF: ${{ secrets.SUPABASE_REF }}
+          # The CLI automatically detects these env vars.
+          # You do NOT need 'supabase login' explicitly.
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_REF }}
         run: |
-          if [ -z "$SUPABASE_REF" ]; then
-            echo "ERROR: SUPABASE_REF is not set. Set the project ref in repository secrets."
+          if [ -z "$SUPABASE_PROJECT_ID" ]; then
+            echo "ERROR: SUPABASE_REF (mapped to SUPABASE_PROJECT_ID) is not set."
             exit 1
           fi
-          supabase functions deploy ai-chat --project-ref "$SUPABASE_REF"
-          supabase functions deploy extract-doc --project-ref "$SUPABASE_REF"
+          
+          # Deploy using the project ID variable
+          supabase functions deploy ai-chat --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy extract-doc --project-ref "$SUPABASE_PROJECT_ID"
 
       - name: Deployment Complete
-
-        run: echo "Supabase Edge Functions deployed. Remember to set function env vars in Supabase dashboard if required (OCR_SPACE_API_KEY, SUPABASE_SERVICE_ROLE_KEY)."
-
-
-
-
+        run: echo "Deployment finished."
