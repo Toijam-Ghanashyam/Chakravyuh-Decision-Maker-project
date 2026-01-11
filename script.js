@@ -70,8 +70,6 @@ const archiveCategoryFilter = document.getElementById('archiveCategoryFilter')
 const chatMessages = document.getElementById('chatMessages')
 const chatInput = document.getElementById('chatInput')
 const chatSend = document.getElementById('chatSend')
-const testAiBtn = document.getElementById('testAiBtn')
-const aiTestOutput = document.getElementById('aiTestOutput')
 const teamMemberEmail = document.getElementById('teamMemberEmail')
 const addTeamMemberBtn = document.getElementById('addTeamMemberBtn')
 const teamMembersList = document.getElementById('teamMembersList')
@@ -126,11 +124,41 @@ function initializeEventListeners() {
 
   // Chat
   if (chatSend) chatSend.addEventListener('click', handleSendMessage)
-  if (testAiBtn) testAiBtn.addEventListener('click', handleTestAi)
   if (chatInput) chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); handleSendMessage() } })
 
   // Team workspace
   if (addTeamMemberBtn) addTeamMemberBtn.addEventListener('click', handleAddTeamMember)
+
+  // Settings
+  const themeLightBtn = document.getElementById('themeLightBtn')
+  const themeDarkBtn = document.getElementById('themeDarkBtn')
+  const notificationsEnabled = document.getElementById('notificationsEnabled')
+  const exportDataBtn = document.getElementById('exportDataBtn')
+  const clearCacheBtn = document.getElementById('clearCacheBtn')
+  const deleteAccountBtn = document.getElementById('deleteAccountBtn')
+
+  if (themeLightBtn) themeLightBtn.addEventListener('click', () => {
+    isDarkMode = false
+    updateTheme()
+    localStorage.setItem('isDarkMode', isDarkMode)
+    showSettingsMessage('Light mode enabled')
+  })
+
+  if (themeDarkBtn) themeDarkBtn.addEventListener('click', () => {
+    isDarkMode = true
+    updateTheme()
+    localStorage.setItem('isDarkMode', isDarkMode)
+    showSettingsMessage('Dark mode enabled')
+  })
+
+  if (notificationsEnabled) notificationsEnabled.addEventListener('change', (e) => {
+    localStorage.setItem('notificationsEnabled', e.target.checked)
+    showSettingsMessage(e.target.checked ? 'Notifications enabled' : 'Notifications disabled')
+  })
+
+  if (exportDataBtn) exportDataBtn.addEventListener('click', handleExportData)
+  if (clearCacheBtn) clearCacheBtn.addEventListener('click', handleClearCache)
+  if (deleteAccountBtn) deleteAccountBtn.addEventListener('click', handleDeleteAccount)
 
   // Archive filter
   if (archiveCategoryFilter) archiveCategoryFilter.addEventListener('change', renderMemoryArchive)
@@ -664,25 +692,6 @@ function renderMemoryArchive() {
       item.appendChild(notes)
     }
 
-    // View Documents button (calls access-docs edge function)
-    if (d.id) {
-      const btnContainer = document.createElement('div')
-      btnContainer.style.marginTop = '0.75rem'
-      btnContainer.style.display = 'flex'
-      btnContainer.style.gap = '0.5rem'
-      
-      const viewDocBtn = document.createElement('button')
-      viewDocBtn.className = 'btn'
-      viewDocBtn.style.padding = '0.5rem 1rem'
-      viewDocBtn.style.fontSize = '0.85rem'
-      viewDocBtn.textContent = '📄 View Documents'
-      viewDocBtn.addEventListener('click', async () => {
-        await openDocumentsModal(d.id, d.title)
-      })
-      btnContainer.appendChild(viewDocBtn)
-      item.appendChild(btnContainer)
-    }
-
     // Documents (from d.documents if available from initial load)
     if (d.documents && d.documents.length > 0) {
       const filesHeader = document.createElement('div')
@@ -1004,22 +1013,6 @@ async function invokeAiChat(systemPrompt, userQuestion) {
 
   const json = await res.json()
   return json?.reply || null
-}
-
-// Dev-only handler: call ai-chat and show raw reply in the UI (does not persist messages)
-async function handleTestAi() {
-  const q = (chatInput && chatInput.value.trim()) || 'Hello from Test'
-  const decisionContext = buildDecisionContext(window.decisions || [])
-  const systemPrompt = buildSystemPrompt(decisionContext, q)
-  if (aiTestOutput) aiTestOutput.textContent = 'Testing...'
-  try {
-    const reply = await invokeAiChat(systemPrompt, q)
-    if (aiTestOutput) aiTestOutput.textContent = reply || 'No reply'
-    console.log('ai-chat test reply:', reply)
-  } catch (err) {
-    if (aiTestOutput) aiTestOutput.textContent = 'Test failed: ' + (err && err.message ? err.message : String(err))
-    console.error('ai-chat test failed', err)
-  }
 }
 
 // Decision Help — analyze pros & cons and return a leaning (advisory)
@@ -1478,4 +1471,72 @@ function showMessage(msg, type) {
 function closeSearch() {
   searchResults.classList.add("hidden")
   searchBackdrop.classList.add("hidden")
+}
+
+// ====== SETTINGS HANDLERS ======
+function showSettingsMessage(message) {
+  const settingsMsg = document.getElementById('settingsMessage')
+  if (!settingsMsg) return
+  settingsMsg.textContent = message
+  settingsMsg.style.display = ''
+  settingsMsg.style.backgroundColor = 'rgba(16, 185, 129, 0.2)'
+  settingsMsg.style.color = '#10b981'
+  setTimeout(() => {
+    settingsMsg.style.display = 'none'
+  }, 3000)
+}
+
+function handleExportData() {
+  const decisions = window.decisions || []
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    decisions: decisions,
+    chatHistory: window.chatHistory || []
+  }
+  const json = JSON.stringify(exportData, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `chakravyuh-export-${Date.now()}.json`
+  a.click()
+  showSettingsMessage('Data exported successfully')
+}
+
+function handleClearCache() {
+  if (confirm('Are you sure you want to clear the cache? This will clear local data only.')) {
+    localStorage.clear()
+    sessionStorage.clear()
+    showSettingsMessage('Cache cleared')
+    setTimeout(() => {
+      location.reload()
+    }, 1000)
+  }
+}
+
+function handleDeleteAccount() {
+  if (!supabaseClient) {
+    alert('Cannot delete account without Supabase')
+    return
+  }
+  
+  if (confirm('Are you sure? This will permanently delete your account and all associated data. This cannot be undone.')) {
+    if (confirm('This is your final warning. Type "DELETE" to confirm.')) {
+      const confirmed = prompt('Type "DELETE" to confirm account deletion:')
+      if (confirmed === 'DELETE') {
+        ;(async () => {
+          const { error } = await supabaseClient.auth.admin.deleteUser(
+            (await supabaseClient.auth.getUser()).data.user.id
+          )
+          if (error) {
+            alert('Error deleting account: ' + error.message)
+          } else {
+            await supabaseClient.auth.signOut()
+            location.href = '/'
+            showSettingsMessage('Account deleted')
+          }
+        })()
+      }
+    }
+  }
 }

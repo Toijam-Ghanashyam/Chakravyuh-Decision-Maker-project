@@ -3,320 +3,437 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Decision Intelligence Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="config.js"></script>
-  <script>
-    // Safe fallback when config.js is missing (prevents runtime errors in dev)
-    window.CONFIG = window.CONFIG || { GEMINI_API_KEY: 'YOUR_GEMINI_API_KEY_HERE' };
-  </script>
+  <title>Decision Intelligence - Smart Decision Making Platform</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --primary-light: #60a5fa;
+      --background: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-tertiary: #94a3b8;
+      --accent: #06b6d4;
+      --green: #10b981;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--background);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Particle background */
+    canvas#particleCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .content-wrapper {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      backdrop-filter: blur(10px);
+      background: rgba(15, 23, 42, 0.8);
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--green));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.25rem;
+    }
+
+    .logo-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    header nav {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    header a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    header a:hover {
+      color: var(--primary);
+    }
+
+    /* Main Hero Section */
+    .hero {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      text-align: center;
+    }
+
+    .hero-content {
+      max-width: 800px;
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+      background: linear-gradient(135deg, var(--primary), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      line-height: 1.6;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .description-box {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 2rem 0;
+      backdrop-filter: blur(10px);
+      text-align: left;
+    }
+
+    .description-box h3 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: var(--green);
+    }
+
+    .description-box ul {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .description-box li {
+      padding: 0.75rem;
+      background: rgba(99, 102, 241, 0.1);
+      border-left: 3px solid var(--primary);
+      border-radius: 4px;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    .cta-section {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-top: 3rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.875rem 2rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--green));
+      color: white;
+      border: 2px solid transparent;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--green);
+      border: 2px solid var(--green);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(99, 102, 241, 0.1);
+      transform: translateY(-2px);
+    }
+
+    /* Features Grid */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-top: 3rem;
+      max-width: 1000px;
+      margin-left: auto;
+      margin-right: auto;
+      width: 100%;
+    }
+
+    .feature-card {
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: var(--primary);
+      transform: translateY(-5px);
+    }
+
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-card p {
+      font-size: 0.95rem;
+      color: var(--text-tertiary);
+      line-height: 1.5;
+    }
+
+    /* Footer */
+    footer {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-tertiary);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      background: rgba(15, 23, 42, 0.5);
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2.5rem;
+      }
+
+      .hero p {
+        font-size: 1rem;
+      }
+
+      .description-box ul {
+        grid-template-columns: 1fr;
+      }
+
+      header {
+        padding: 1rem;
+      }
+
+      header nav {
+        gap: 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div id="app" class="app-container">
-    <!-- Login Page (Initially Shown) -->
-    <div id="loginPage" class="login-page active">
-      <div class="login-container">
-        <div class="login-content">
-          <h1 class="login-title">Decision Intelligence</h1>
-          <p class="login-subtitle">Your decision intelligence hub</p>
-          <form id="loginForm" class="login-form">
-            <div class="form-group">
-              <label for="email">Email</label>
-              <input type="email" id="email" placeholder="your@email.com" required>
-            </div>
-            <div class="form-group">
-              <label for="password">Password</label>
-              <input type="password" id="password" placeholder="••••••••" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
-          </form>
-          <!-- Signup Form (hidden by default) -->
-          <form id="signupForm" class="login-form" style="display:none;">
-            <div class="form-group">
-              <label for="signupName">Full name</label>
-              <input type="text" id="signupName" placeholder="Your name">
-            </div>
-            <div class="form-group">
-              <label for="signupEmail">Email</label>
-              <input type="email" id="signupEmail" placeholder="your@email.com" required>
-            </div>
-            <div class="form-group">
-              <label for="signupPassword">Password</label>
-              <input type="password" id="signupPassword" placeholder="••••••••" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-lg">Create account</button>
-          </form>
+  <canvas id="particleCanvas"></canvas>
 
-          <div class="auth-toggle" style="margin-top:1rem; text-align:center; color:var(--text-tertiary);">
-            <button id="showSignupBtn" class="btn" style="background:transparent; color:var(--text-tertiary);">Create an account</button>
-            <button id="showLoginBtn" class="btn" style="display:none; background:transparent; color:var(--text-tertiary);">Back to sign in</button>
+  <div class="content-wrapper">
+    <!-- Header -->
+    <header>
+      <div class="logo-section">
+        <div class="logo">DI</div>
+        <div class="logo-text">Decision Intelligence</div>
+      </div>
+      <nav>
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+      </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <div class="hero">
+      <div class="hero-content">
+        <h1>Smart Decision Making</h1>
+        <p>Track, analyze, and optimize your decisions with AI-powered insights and collaborative intelligence.</p>
+
+        <div class="description-box" id="about">
+          <h3>What is Decision Intelligence?</h3>
+          <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+            Decision Intelligence (DI) is your comprehensive platform for capturing, analyzing, and learning from every decision you make. Whether you're managing strategic initiatives or team collaborations, DI helps you build decision-making excellence through data, AI insights, and institutional memory.
+          </p>
+          <h3 style="margin-top: 1.5rem;">Key Features</h3>
+          <p style="color: var(--text-secondary); line-height: 1.8;">
+            Track and analyze all your decisions with context and alternatives. Leverage AI-powered insights to improve future choices. Collaborate seamlessly with your team members on important decisions. Build an archive of past decisions to learn from historical patterns. Organize decisions by category for better management. Maintain full decision history for institutional knowledge.
+          </p>
+        </div>
+
+        <div class="cta-section">
+          <button class="btn btn-primary" onclick="openDashboard()">
+            <span>→</span>
+            Login
+          </button>
+          <button class="btn btn-secondary" onclick="scrollToFeatures()">
+            Learn More
+          </button>
+        </div>
+
+        <div class="features" id="features">
+          <div class="feature-card">
+            <h4>Record Decisions</h4>
+            <p>Capture every decision with context, alternatives considered, and reasoning behind choices.</p>
+          </div>
+          <div class="feature-card">
+            <h4>AI Analysis</h4>
+            <p>Get intelligent insights and suggestions powered by advanced AI to improve future decisions.</p>
+          </div>
+          <div class="feature-card">
+            <h4>Team Collaboration</h4>
+            <p>Share decisions with your team, invite members, and build collective decision-making wisdom.</p>
+          </div>
+          <div class="feature-card">
+            <h4>Search & Archive</h4>
+            <p>Easily search through your decision history and learn from past choices.</p>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Main Dashboard (Shown After Login) -->
-    <div id="dashboard" class="dashboard-container">
-      <div class="dashboard-layout">
-        <!-- Left Sidebar Navigation -->
-        <aside id="sidebar" class="sidebar">
-          <div class="sidebar-header">
-            <div class="logo">DI</div>
-            <h2>Dashboard</h2>
-          </div>
-
-          <nav class="sidebar-nav">
-            <div class="nav-section">
-              <h3 class="nav-title">Main</h3>
-              <button class="nav-item active" data-view="dashboard">
-                <span class="icon">📊</span>
-                <span>Dashboard</span>
-              </button>
-              <button class="nav-item" data-view="ai-insights">
-                <span class="icon">🤖</span>
-                <span>AI Chat</span>
-              </button>
-              <button class="nav-item" data-view="memory-archive">
-                <span class="icon">📚</span>
-                <span>Memory Archive</span>
-              </button>
-              <button class="nav-item" data-view="add-decision">
-                <span class="icon">➕</span>
-                <span>Add Decision</span>
-              </button>
-              <button class="nav-item" data-view="team-workspace">
-                <span class="icon">👥</span>
-                <span>Team Workspace</span>
-              </button>
-            </div>
-
-            <div class="nav-section">
-              <h3 class="nav-title">Resources</h3>
-              <button class="nav-item" data-view="documentation">
-                <span class="icon">📖</span>
-                <span>Documentation</span>
-              </button>
-              <button class="nav-item" data-view="settings">
-                <span class="icon">⚙️</span>
-                <span>Settings</span>
-              </button>
-            </div>
-          </nav>
-        </aside>
-
-        <!-- Main Content Area -->
-        <div class="main-content">
-          <!-- Top Bar -->
-          <header class="top-bar">
-            <div class="header-left">
-              <h2 class="page-title" id="pageTitle">Dashboard Overview</h2>
-              <p class="page-subtitle" id="pageSubtitle">Your decision intelligence hub</p>
-            </div>
-
-            <!-- Search Bar -->
-            <div class="search-container">
-              <input
-                type="text"
-                id="searchInput"
-                class="search-input"
-                placeholder="Search decisions..."
-                aria-label="Search decisions"
-              >
-              <button id="clearSearchBtn" class="btn-search-clear" aria-label="Clear search">
-                ✕
-              </button>
-              
-              <!-- Search Results Dropdown -->
-              <div id="searchResults" class="search-results hidden">
-                <div id="searchResultsList" class="search-results-list"></div>
-              </div>
-            </div>
-
-            <!-- Right Actions -->
-            <div class="header-right">
-              <div id="currentUser" class="current-user" style="margin-right:0.5rem; color:var(--text-secondary); display:none"></div>
-              <button id="themeToggle" class="btn-icon" aria-label="Toggle theme">
-                <span class="icon">☀️</span>
-              </button>
-              <button id="logoutBtn" class="btn-icon" aria-label="Logout" style="display:none">
-                <span class="icon">🚪</span>
-              </button>
-            </div>
-          </header>
-
-          <!-- Views Container -->
-          <div class="views-container">
-            <div id="dashboard-view" class="view active">
-              <div class="view-content">
-                <h3>Dashboard Overview</h3>
-                <p>Welcome to your decision intelligence hub. Track decisions, insights, and team collaboration all in one place.</p>
-                <div class="stats-grid">
-                  <div class="stat-card">
-                    <div class="stat-label">Total Decisions</div>
-                    <div id="totalDecisions" class="stat-value">0</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">This Month</div>
-                    <div id="thisMonthCount" class="stat-value">0</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">Pending Review</div>
-                    <div id="pendingReviewCount" class="stat-value">0</div>
-                  </div>
-                  <div class="stat-card">
-                    <div class="stat-label">Team Members</div>
-                    <div id="teamMembersCount" class="stat-value">0</div>
-                  </div>
-                </div>
-                
-                <!-- Recent Decisions Section -->
-                <div class="recent-decisions-section" style="margin-top: 3rem;">
-                  <h4 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-primary);">Recent Decisions</h4>
-                  <div id="recentDecisionsList" class="recent-decisions-list"></div>
-                </div>
-              </div>
-            </div>
-
-            <div id="ai-insights-view" class="view">
-              <div class="view-content">
-                <h3>AI Chat Assistant</h3>
-                <p>Conversational decision support powered by AI.</p>
-                <div class="chat-panel">
-                  <div id="chatMessages" class="chat-messages" style="min-height:300px; max-height:400px; overflow:auto; padding:1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; margin-bottom:1rem; display:flex; flex-direction:column;"></div>
-                  <div class="chat-input" style="display:flex; gap:0.5rem;">
-                    <input id="chatInput" type="text" placeholder="Ask the AI about decisions..." style="flex:1; padding:0.75rem; border-radius:8px; border:1px solid var(--border); background:var(--background); color:var(--text-primary);" />
-                    <button id="chatSend" class="btn btn-primary">Send</button>
-                    <!-- Dev-only: quick test button to call the ai-chat function and display its raw reply -->
-                    <button id="testAiBtn" class="btn" title="Dev: call ai-chat directly">Test AI</button>
-                  </div>
-                  <div id="aiTestOutput" style="margin-top:0.5rem; color:var(--text-secondary); font-size:0.95rem;"></div>
-                </div>
-              </div>
-            </div>
-
-            <div id="memory-archive-view" class="view">
-              <div class="view-content">
-                <h3>Memory Archive</h3>
-                <p>Historical decision timeline and past insights.</p>
-
-                <div style="display:flex; gap:0.75rem; align-items:center; margin-bottom:1rem;">
-                  <label for="archiveCategoryFilter" style="margin-right:0.5rem; color:var(--text-tertiary);">Filter by category:</label>
-                  <select id="archiveCategoryFilter" style="padding:0.5rem; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text-primary);">
-                    <option value="">All</option>
-                    <option value="Strategic">Strategic</option>
-                    <option value="Product">Product</option>
-                    <option value="Technical">Technical</option>
-                    <option value="HR">HR</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Risk">Risk</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div id="memoryArchiveList" class="archive-list"></div>
-              </div>
-            </div>
-
-            <div id="add-decision-view" class="view">
-              <div class="view-content">
-                <h3>Add New Decision</h3>
-                <p>Record a new decision to track and analyze.</p>
-                <form id="addDecisionForm" class="add-decision-form">
-                  <div class="form-group">
-                    <label for="decisionTitle">Decision Title</label>
-                    <input type="text" id="decisionTitle" placeholder="e.g., Market Entry Strategy" required>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="decisionDescription">Decision Description</label>
-                    <textarea id="decisionDescription" placeholder="Describe the decision in detail..." rows="3" required></textarea>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="decisionCategory">Category</label>
-                    <select id="decisionCategory" required>
-                      <option value="">Select a category</option>
-                      <option value="Strategic">Strategic</option>
-                      <option value="Product">Product</option>
-                      <option value="Technical">Technical</option>
-                      <option value="HR">HR</option>
-                      <option value="Finance">Finance</option>
-                      <option value="Risk">Risk</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="decisionDate">Decision Date</label>
-                    <input type="date" id="decisionDate" required>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="decisionNotes">Notes (optional)</label>
-                    <textarea id="decisionNotes" placeholder="Add any additional notes..." rows="3"></textarea>
-                  </div>
-
-                  <div class="form-group">
-                    <label for="decisionFiles">Related documents (upload any supporting files)</label>
-                    <input type="file" id="decisionFiles" multiple />
-                    <small style="display:block; color:var(--text-tertiary); margin-top:0.25rem;">Text files will be parsed in the browser; PDF/images will be uploaded and processed server-side if that backend extractor is available.</small>
-                  </div>
-
-                  <button type="submit" class="btn btn-primary">Save Decision</button>
-                  <div id="addDecisionMessage" class="form-message" style="display:none; margin-top:1rem; padding:0.75rem; border-radius:8px;"></div>
-                </form>
-              </div>
-            </div>
-
-            <div id="team-workspace-view" class="view">
-              <div class="view-content">
-                <h3>Team Workspace</h3>
-                <p>Collaborative decision making with your team.</p>
-                <div class="team-panel" style="display:flex; gap:1.5rem; flex-direction:column; max-width:800px;">
-                  <div style="display:flex; gap:1rem; align-items:center;">
-                    <input id="teamMemberEmail" type="email" placeholder="Invite team member by email" style="flex:1; padding:0.75rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-primary);" />
-                    <button id="addTeamMemberBtn" class="btn">Invite</button>
-                  </div>
-                  <div style="margin-top:0.5rem;">
-                    <h4 style="margin-bottom:0.5rem;">Team Members</h4>
-                    <div id="teamMembersList" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div id="documentation-view" class="view">
-              <div class="view-content">
-                <h3>Documentation</h3>
-                <p>Guides and resources to help you get started.</p>
-                <ul class="doc-list">
-                  <li>Getting Started Guide</li>
-                  <li>Best Practices</li>
-                  <li>API Reference</li>
-                  <li>FAQ</li>
-                </ul>
-              </div>
-            </div>
-
-            <div id="settings-view" class="view">
-              <div class="view-content">
-                <h3>Settings</h3>
-                <p>Application preferences and configuration.</p>
-                <div class="settings-placeholder">
-                  <p>Settings panel would go here...</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Backdrop for search results -->
-    <div id="searchBackdrop" class="search-backdrop hidden"></div>
+    <!-- Footer -->
+    <footer>
+      <p>&copy; 2026 Decision Intelligence. Making better decisions together.</p>
+      <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-tertiary);">Developed by THE MYTHBORNS</p>
+    </footer>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
-  <script src="script.js"></script>
-  <script src="config.js"></script>
+
+  <script>
+    // Particle Effect
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.size = Math.random() * 1.5 + 0.3;
+        this.speedX = (Math.random() - 0.5) * 0.2;
+        this.speedY = (Math.random() - 0.5) * 0.2;
+        this.opacity = Math.random() * 0.3 + 0.1;
+      }
+
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+
+        if (this.x > canvas.width) this.x = 0;
+        if (this.x < 0) this.x = canvas.width;
+        if (this.y > canvas.height) this.y = 0;
+        if (this.y < 0) this.y = canvas.height;
+      }
+
+      draw() {
+        ctx.fillStyle = `rgba(59, 130, 246, ${this.opacity})`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const particles = [];
+    for (let i = 0; i < 8; i++) {
+      particles.push(new Particle());
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let particle of particles) {
+        particle.update();
+        particle.draw();
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    // Navigation Functions
+    function openDashboard() {
+      window.location.href = 'dashboard.html';
+    }
+
+    function scrollToFeatures() {
+      document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
+    }
+  </script>
 </body>
 </html>
